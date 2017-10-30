@@ -19,8 +19,8 @@ class DataModel:
         from core.models import Student, StudentData1, Teacher, SemestrData, Activity, OOP, SubjectUP, \
             SubjectPlatform, StudentCourseSubject, Result, CurrentProgress, Quiz, StudentData2
 
-        return Student, StudentData1, Teacher, SemestrData, Activity, OOP, SubjectUP, SubjectPlatform, \
-            StudentCourseSubject, Result, CurrentProgress, Quiz, StudentData2
+        return OOP, Student, StudentData1, StudentData2, SemestrData, Activity, Teacher, SubjectUP, SubjectPlatform, \
+            StudentCourseSubject, Result, CurrentProgress, Quiz
 
     def _load_data_model(self):
         self.data_model = OrderedDict()
@@ -52,8 +52,6 @@ class Loader:
         return '%s_%s' % (prefix, value)
 
     def get_value(self, model, field_name, prefix, raw_value):
-        if field_name == 'import_id':
-            raw_value = self.add_prefix(prefix, raw_value)
         field = _get_field(model, field_name)
         print(field_name, type(field))
         if isinstance(field, ForeignKey):
@@ -61,6 +59,9 @@ class Loader:
             return related_model.objects.filter(import_id=self.add_prefix(prefix, raw_value)).first()
         elif isinstance(field, NullBooleanField):
             return raw_value
+
+        if field_name == 'import_id':
+            raw_value = self.add_prefix(prefix, raw_value)
         return raw_value
 
     @atomic
@@ -69,7 +70,11 @@ class Loader:
         wb = load_workbook(filename, read_only=True)
         for sheet_name, mapping_data in data_model.items():
             model = mapping_data['model']
-            ws = wb.get_sheet_by_name(sheet_name)
+            try:
+                ws = wb.get_sheet_by_name(sheet_name)
+            except KeyError:
+                continue
+
             header = [cell.value for cell in ws[1]]
             fields = [mapping_data['fields'].get(col_name, None) for col_name in header]
             for row_num, row in enumerate(ws.rows):
@@ -92,10 +97,10 @@ class Exporter:
     def get_value(self, model, field_name, obj):
         field = _get_field(model, field_name)
         value = getattr(obj, field_name)
-        if field_name == 'import_id':
-            return self.remove_prefix(value)
         if isinstance(field, ForeignKey):
             value = self.remove_prefix(value.import_id)
+        elif field_name == 'import_id':
+            return self.remove_prefix(value)
         return value
 
     def export(self):
