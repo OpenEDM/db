@@ -85,8 +85,12 @@ class Loader:
                     for cell_i, cell in enumerate(row)
                 }
                 data.pop(None, None)
-                obj = model.objects.update_or_create(import_id=data.pop('import_id'), defaults=data)
-                print(obj)
+                try:
+                    obj = model.objects.update_or_create(import_id=data.pop('import_id'), defaults=data)
+                    print(obj)
+                except Exception as e:
+                    print(e)
+
 
 
 class Exporter:
